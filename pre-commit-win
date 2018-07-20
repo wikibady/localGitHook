@@ -1,0 +1,76 @@
+#!/bin/bash
+
+#定义几个色彩函数
+## blue to echo 
+function blue(){
+    echo -e "\033[35m[ $1 ]\033[0m"
+}
+
+
+## green to echo 
+function green(){
+    echo -e "\033[32m[ $1 ]\033[0m"
+}
+
+## Error to warning with blink
+function bred(){
+    echo -e "\033[31m\033[01m\033[05m[ $1 ]\033[0m"
+}
+
+## Error to warning with blink
+function byellow(){
+    echo -e "\033[33m\033[01m\033[05m[ $1 ]\033[0m"
+}
+
+
+## Error
+function red(){
+    echo -e "\033[31m\033[01m[ $1 ]\033[0m"
+}
+
+## warning
+function yellow(){
+    echo -e "\033[33m\033[01m[ $1 ]\033[0m"
+}
+
+# 读取git暂存区的.js 和 .vue文件
+files=$(git diff --cached --name-only | grep -E '\.js$|\.vue$')
+
+# Prevent ESLint help message if no files matched
+
+# 如果文件列表为空，退出执行环境，继续执行commit操作
+if [ "$files" = "" ] ; then
+    exit 0
+fi
+
+# 开始
+green "pre-commit eslint check start"
+
+failed=0
+
+# 循环文件列表
+for file in ${files}; do
+    # 判断文件是否存在(-e 表示 exists)
+    if [ ! -e $file ] ; then
+        continue
+    fi
+    if [ "$file" = ".eslintrc.js" ] ; then
+        continue
+    fi
+    
+    # 在控制台打印该文件的eslint检验结果，如果通过，则返回空
+    git show :$file | ./node_modules/.bin/eslint $file --color 
+    
+    # 文件未通过eslint检验，标记为失败
+    if [ $? != 0 ] ; then
+        failed=1
+    fi
+done;
+
+# 有文件未通过检验，退出执行环境，中断commit操作
+if [ $failed != 0 ] ; then
+    red "X  ESLint failed, git commit denied"
+    exit $failed
+fi
+
+
